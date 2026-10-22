@@ -273,6 +273,8 @@ h1{font-family:Georgia,serif;color:#ffe7ad;margin:5px 0 7px;font-size:clamp(31px
   <section class="finale" id="finale">
     <h2>Клёпа снова летает!</h2>
     <p>Все 20 предметов починены, чертёж собран, пружина встала на место. Мастерская снова живая.</p>
+    <p id="finaleStats" style="margin-top:8px;font-size:12px;color:#f2e4cc;line-height:1.55"></p>
+    <button class="report-btn" id="finalReportBtn" style="display:none;max-width:420px;margin:12px auto 0;">🏁 Скопировать финальный отчёт</button>
   </section>
 
 </div>
@@ -307,6 +309,7 @@ h1{font-family:Georgia,serif;color:#ffe7ad;margin:5px 0 7px;font-size:clamp(31px
       <div class="progress-sheet-stat"><strong id="modalTurns">0</strong><span>ходов закрыто</span></div>
     </div>
     <button class="report-btn progress-report" id="progressReportBtn">📋 Скопировать последний отчёт</button>
+    <button class="report-btn progress-report" id="progressFinalReportBtn" style="display:none;margin-top:10px;">🏁 Скопировать финальный отчёт</button>
     <div class="sheet-section">
       <div class="sheet-section-title"># Хэштег для отчётов</div>
       <div class="hashtag-hint">Можно написать с # или без — игра сама подставит его в конец отчёта.</div>
@@ -439,8 +442,11 @@ h1{font-family:Georgia,serif;color:#ffe7ad;margin:5px 0 7px;font-size:clamp(31px
     const mturn=document.getElementById('modalTurns');if(mturn)mturn.textContent=state.turnCounter;
     const mbp=document.getElementById('modalBlueprint');if(mbp)mbp.textContent=f+' / 4';
     const hint=document.getElementById('progressModalHint');if(hint){if(n>=MAX_ITEMS)hint.textContent='Все заказы выполнены. Чертёж собран полностью.';else{const next=Math.ceil((n+1)/5)*5,left=next-n;hint.textContent=(item?`Текущий заказ: ${item.name} · ремонт ${repairText}. `:'')+'До следующего фрагмента: '+left+' '+(left===1?'починка':'починки')+'.';}}
-    const pr=document.getElementById('progressReportBtn');if(pr)pr.classList.toggle('show',state.history.length>0);
+    const pr=document.getElementById('progressReportBtn');if(pr)pr.style.display=state.history.length?'block':'none';
     const fin=n>=MAX_ITEMS;document.getElementById('finale').classList.toggle('show',fin);if(fin)setKlepa('fly');
+    const finalBtn=document.getElementById('finalReportBtn');if(finalBtn)finalBtn.style.display=fin?'block':'none';
+    const finalProgressBtn=document.getElementById('progressFinalReportBtn');if(finalProgressBtn)finalProgressBtn.style.display=fin?'block':'none';
+    const stats=historyStats();const finaleStats=document.getElementById('finaleStats');if(finaleStats)finaleStats.textContent=fin?`Ходов: ${state.turnCounter} · точных расчётов: ${stats.exact} · обычных ремонтов: ${stats.success} · переделок: ${stats.rework}`:'';
   }
 
   function renderBets(){
@@ -530,7 +536,9 @@ h1{font-family:Georgia,serif;color:#ffe7ad;margin:5px 0 7px;font-size:clamp(31px
 
   function pointsWord(n){const m10=n%10,m100=n%100;if(m10===1&&m100!==11)return'очко';if(m10>=2&&m10<=4&&(m100<12||m100>14))return'очка';return'очков'}
   function outcomeLabel(o){return o==='jackpot'?'✨ Точный расчёт! Объём работы угадан точно.':o==='win'?'🔧 Поломка оказалась проще, чем ожидалось.':'💥 Внутри всё оказалось хуже. Переделка!'}
+  function historyStats(){return state.history.reduce((acc,h)=>{if(h.outcome==='jackpot')acc.exact++;else if(h.outcome==='win')acc.success++;else acc.rework++;return acc},{exact:0,success:0,rework:0})}
   function buildReport(){const h=state.history[state.history.length-1];if(!h)return'';const item=h.itemId?getItem(h.itemId):null;const lines=[];lines.push(`🎲 Ход №${h.turn}${item?' · '+item.name:''}`);lines.push(`Моя оценка: ${h.bet}`);lines.push(`Реальная сложность: ${h.roll*100} крестиков`);lines.push('');lines.push(outcomeLabel(h.outcome));lines.push(`🪡 Моё задание: ${h.stitches} крестиков`);if(item){lines.push('');if(h.itemCompleted)lines.push(`✅ ${item.name} — починено!`);else lines.push(`🔧 Ремонт: ${h.progressAfter??itemRepairProgress(item.id)}/${h.itemCost||repairCost(item)}`);}const n=repairedCount();if(n>0)lines.push(`📋 Починено: ${n}/20 предметов`);const f=countFound();if(f>0)lines.push(`🧩 Чертёж: ${f}/4 фрагмента`);lines.push(`🪡 Всего вышито: ${state.totalStitches} крестиков`);lines.push('');if(h.crowLine)lines.push(`⚙️ ${h.crowLine}`);const tag=normalizeHashtag(state.hashtag);if(tag){lines.push('');lines.push(tag)}return lines.join('\n')}
+  function buildFinalReport(){if(repairedCount()<MAX_ITEMS||countFound()<4)return'';const stats=historyStats();const lines=[];lines.push('🏁 Мастерская Клёпы — финальный отчёт');lines.push('');lines.push('🐦 Клёпа снова летает!');lines.push(`🔧 Починено: ${repairedCount()}/${MAX_ITEMS} предметов`);lines.push(`🧩 Чертёж: ${countFound()}/4 фрагмента`);lines.push(`🪡 Всего вышито: ${state.totalStitches} крестиков`);lines.push(`🎲 Всего ходов: ${state.turnCounter}`);lines.push(`✨ Точных расчётов: ${stats.exact}`);lines.push(`🔧 Обычных ремонтов: ${stats.success}`);lines.push(`💥 Переделок: ${stats.rework}`);lines.push('');lines.push('Мастерская снова работает, а крыло Клёпы восстановлено.');const tag=normalizeHashtag(state.hashtag);if(tag){lines.push('');lines.push(tag)}return lines.join('\n')}
 
   function b64Encode(str){return btoa(unescape(encodeURIComponent(str)))}function b64Decode(str){return decodeURIComponent(escape(atob(str)))}
   function exportProgress(){const d={b:state.board,r:state.repaired,a:state.activeItemId,ip:state.itemProgress,l:state.lastBet,h:state.history,t:state.totalStitches,tc:state.turnCounter,p:state.pending,lr:state.lastReportTurn,lc:state.lastCrow,ht:state.hashtag};return'KL-'+b64Encode(JSON.stringify(d))}
@@ -544,8 +552,11 @@ h1{font-family:Georgia,serif;color:#ffe7ad;margin:5px 0 7px;font-size:clamp(31px
   document.getElementById('hashtagInput').addEventListener('input',e=>{state.hashtag=normalizeHashtag(e.target.value);saveState()});
   document.getElementById('hashtagInput').addEventListener('blur',e=>{e.target.value=state.hashtag||''});
   async function copyLatestReport(){if(!normalizeHashtag(state.hashtag)){const entered=prompt('Введи свой хэштег для отчётов (например, #АняКлёпа):');if(entered===null)return;state.hashtag=normalizeHashtag(entered);saveState();renderHashtag()}const text=buildReport();if(!text)return;try{await navigator.clipboard.writeText(text);toast('Отчёт скопирован')}catch(e){prompt('Скопируйте отчёт:',text)}}
+  async function copyFinalReport(){if(!normalizeHashtag(state.hashtag)){const entered=prompt('Введи свой хэштег для отчётов (например, #АняКлёпа):');if(entered===null)return;state.hashtag=normalizeHashtag(entered);saveState();renderHashtag()}const text=buildFinalReport();if(!text)return;try{await navigator.clipboard.writeText(text);toast('Финальный отчёт скопирован')}catch(e){prompt('Скопируйте финальный отчёт:',text)}}
   document.getElementById('reportBtn').onclick=copyLatestReport;
   document.getElementById('progressReportBtn').onclick=copyLatestReport;
+  document.getElementById('finalReportBtn').onclick=copyFinalReport;
+  document.getElementById('progressFinalReportBtn').onclick=copyFinalReport;
   document.getElementById('rulesOpenBtn').onclick=()=>openSheet('rulesSheet');
   document.getElementById('progressOpenBtn').onclick=()=>openSheet('progressSheet');
   document.querySelectorAll('[data-close-sheet]').forEach(b=>b.onclick=()=>closeSheet(b.dataset.closeSheet));
